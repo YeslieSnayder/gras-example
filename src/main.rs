@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{io::BufRead, io::BufReader, fs::File, path::PathBuf};
 use clap::Parser;
 
 /// Command line arguments
@@ -13,5 +13,12 @@ struct Cli {
 fn main() {
     let args = Cli::parse();
 
-    println!("pattern: {:?}, file: {:?}", args.pattern, args.path);
+    let file = File::open(&args.path).expect("can't open file");
+    let reader = BufReader::new(file);
+
+    for line in reader.lines().flatten() {
+        if line.contains(&args.pattern) {
+            println!("{}", line);
+        }
+    }
 }
