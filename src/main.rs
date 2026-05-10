@@ -1,7 +1,8 @@
-use std::{io::BufRead, io::BufReader, fs::File, path::PathBuf};
+use std::{fs::File, path::PathBuf,
+          io::{stdout, Read, BufRead, BufReader}};
 use anyhow::{Result, Context};
 use clap::Parser;
-use log::info;
+use log::{info, warn};
 
 /// Command line arguments
 #[derive(Parser, Debug)]
@@ -26,11 +27,20 @@ fn main() -> Result<()> {
     let reader = BufReader::new(file);
     info!("file successfully read");
 
+    find_matches(reader, &args.pattern, &mut stdout())?;
+
+    Ok(())
+}
+
+fn find_matches(reader: BufReader<impl Read>, pattern: &str, mut writer: impl std::io::Write) -> Result<()> {
     // let pb = indicatif::ProgressBar::new_spinner();
     let mut i: u32 = 0;
     for line in reader.lines().flatten() {
-        if line.contains(&args.pattern) {
-            println!("{}", line);
+        if line.contains(pattern) {
+            writeln!(writer, "{}", line).with_context(|| {
+                warn!("failed to write output");
+                "failed to write output"
+            })?;
             i += 1;
         }
         // pb.inc(1);
@@ -40,4 +50,16 @@ fn main() -> Result<()> {
     info!("{} matches found", i);
 
     Ok(())
+}
+
+#[test]
+fn find_a_match() {
+    let input = "lorem ipsum\ndolor sit amet";
+    let pattern = "lorem";
+
+    let mut writer = Vec::new();
+
+    find_matches(BufReader::new(input.as_bytes()), pattern, &mut writer).expect("didn't fail");
+
+    assert_eq!(writer, b"lorem ipsum\n");
 }
